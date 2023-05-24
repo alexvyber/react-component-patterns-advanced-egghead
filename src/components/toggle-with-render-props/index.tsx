@@ -36,10 +36,15 @@ type Render = {
   ) => JSX.Element
 }
 
-function Toggle({ children }: React.PropsWithChildren): JSX.Element
-function Toggle({ render }: Render & SomeProp): JSX.Element
-function Toggle({ children, render, some }: React.PropsWithChildren & Render & SomeProp) {
-  const [on, setOn] = React.useState(false)
+function Toggle(props: React.PropsWithChildren): JSX.Element
+function Toggle(props: Render & SomeProp & DefaultOn): JSX.Element
+function Toggle({
+  children,
+  render,
+  some,
+  defaultOn,
+}: React.PropsWithChildren & Render & SomeProp & DefaultOn) {
+  const [on, setOn] = React.useState(defaultOn ?? false)
 
   if (!render)
     return (
@@ -54,11 +59,15 @@ function Toggle({ children, render, some }: React.PropsWithChildren & Render & S
 
   return render({
     some,
-    getTogglerProps: ({ onToggle, ...rest } = {}) => ({
+    getTogglerProps: ({ onToggle, onReset, ...rest } = {}) => ({
       on,
       onToggle: () => {
         setOn(!on)
         onToggle?.()
+      },
+      onReset: () => {
+        onReset?.()
+        setOn(defaultOn ?? false)
       },
       "aria-expanded": on,
       ...rest,
@@ -88,21 +97,23 @@ Toggle.Off = withToggle(ToggledOff)
 Toggle.Button = withToggle(Switch)
 
 export function ToggleWithRenderProps() {
-  return Math.random() > 0.01 ? (
+  return boolean() ? (
     <Toggle
-      some={"Some Prop"}
       render={({ some, getTogglerProps }) => (
         <>
           {getTogglerProps().on ? some : "off"} - render
           <Switch
             {...getTogglerProps({
-              onToggle: () => alert("asdfasdf"),
+              onToggle: () => console.log("🚀 ~ onToggle:"),
               style: { fontSize: "40px", padding: "20px" },
             })}>
             Toggle
           </Switch>
+          <Button onClick={getTogglerProps().onReset}>REset</Button>
         </>
       )}
+      some={"Some Prop"}
+      defaultOn={boolean()}
     />
   ) : (
     <Toggle>
@@ -114,7 +125,13 @@ export function ToggleWithRenderProps() {
   )
 }
 
-type TogglerProps = On & OnToggle & React.HTMLAttributes<HTMLElement>
+type TogglerProps = On & OnToggle & OnReset & Omit<React.HTMLAttributes<HTMLElement>, "onReset">
 type SomeProp = { some?: string }
+type DefaultOn = { defaultOn?: boolean }
 type On = { on?: boolean }
 type OnToggle = { onToggle?: () => void }
+type OnReset = { onReset?: () => void }
+
+function boolean() {
+  return Math.random() > 0.5
+}
